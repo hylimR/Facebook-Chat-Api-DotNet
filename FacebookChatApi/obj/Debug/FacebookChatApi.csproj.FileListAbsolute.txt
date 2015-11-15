@@ -1,0 +1,14 @@
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\edge\double_edge.js
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\edge\edge.js
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\edge\x64\node.dll
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\edge\x86\node.dll
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\edge\x64\edge.node
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\edge\x86\edge.node
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\FacebookChatApi.dll
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\FacebookChatApi.pdb
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\EdgeJs.dll
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\Newtonsoft.Json.dll
+D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\Newtonsoft.Json.xml
+D:\Project\FacebookChatApi\FacebookChatApi\obj\Debug\FacebookChatApi.dll
+D:\Project\FacebookChatApi\FacebookChatApi\obj\Debug\FacebookChatApi.pdb
+D:\Project\FacebookChatApi\FacebookChatApi\obj\Debug\FacebookChatApi.csprojResolveAssemblyReference.cache
