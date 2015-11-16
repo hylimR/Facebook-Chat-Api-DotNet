@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.IO;
 using Newtonsoft.Json.Linq;
 using EdgeJs;
-using static FacebookChatApi.NodeJSScriptConstant;
 
 namespace FacebookChatApi
 {
@@ -121,7 +120,7 @@ namespace FacebookChatApi
                     throw new Exception("Please set email and password before login");
                 }
 
-                var login = Edge.Func(METHOD_LOGIN);
+                var login = Edge.Func(NodeJSScriptConstant.METHOD_LOGIN);
                 dynamic result = await login(new { email = this.Email, password = this.Password });
 
                 if ((string) result.status == "200")
@@ -154,7 +153,7 @@ namespace FacebookChatApi
                     throw new Exception("Please set email and password before login");
                 }
 
-                var login = Edge.Func(METHOD_LOGIN);
+                var login = Edge.Func(NodeJSScriptConstant.METHOD_LOGIN);
                 var result = await login(new { email = this.Email, password = this.Password, forceLogin = true });
 
                 if ((string)result == "200")
@@ -199,7 +198,7 @@ namespace FacebookChatApi
                     return "";
                 });
 
-                var sendMessage = Edge.Func(METHOD_SEND_MESSAGE);
+                var sendMessage = Edge.Func(NodeJSScriptConstant.METHOD_SEND_MESSAGE);
                 var result = await sendMessage(new
                 {
                     type = "text",
@@ -239,7 +238,7 @@ namespace FacebookChatApi
                     return "";
                 });
 
-                var sendMessage = Edge.Func(METHOD_SEND_MESSAGE);
+                var sendMessage = Edge.Func(NodeJSScriptConstant.METHOD_SEND_MESSAGE);
                 var result = await sendMessage(new
                 {
                     type = "file",
@@ -279,7 +278,7 @@ namespace FacebookChatApi
                     return "";
                 });
 
-                var sendMessage = Edge.Func(METHOD_SEND_MESSAGE);
+                var sendMessage = Edge.Func(NodeJSScriptConstant.METHOD_SEND_MESSAGE);
                 var result = await sendMessage(new
                 {
                     type = "file",
@@ -319,7 +318,7 @@ namespace FacebookChatApi
                     return "";
                 });
 
-                var sendMessage = Edge.Func(METHOD_SEND_MESSAGE);
+                var sendMessage = Edge.Func(NodeJSScriptConstant.METHOD_SEND_MESSAGE);
                 var result = await sendMessage(new
                 {
                     type = "url",
@@ -380,7 +379,7 @@ namespace FacebookChatApi
                 return "";
             });
 
-            var toggleMessageListening = Edge.Func(METHOD_MESSAGE_LISTENER);
+            var toggleMessageListening = Edge.Func(NodeJSScriptConstant.METHOD_MESSAGE_LISTENER);
             await toggleMessageListening(new
             {
                 listenMessage = this.listenMessage,
@@ -397,7 +396,7 @@ namespace FacebookChatApi
         /// <returns></returns>
         public async void SearchForUser(string keyword)
         {
-            var searchForUser = Edge.Func(METHOD_SEARCH_USER);
+            var searchForUser = Edge.Func(NodeJSScriptConstant.METHOD_SEARCH_USER);
             var result = await searchForUser(new { keyword = keyword });
 
             List<UserSearchResult> userList = UserSearchResult.Parse((string)result);
