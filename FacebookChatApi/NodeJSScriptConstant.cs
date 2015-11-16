@@ -16,7 +16,7 @@ return function(options, cb) {
     login({email : options.email, password: options.password }, function callback(err, api){
         if(err) return cb(null, '0');
         if(options.forceLogin) api.setOptions({ forceLogin : true });
-        
+
         GLOBAL.apiInstance = api;
         var out = {};
         out.currentUserID = api.getCurrentUserID();
@@ -112,14 +112,10 @@ return function(options, cb) {
 var api = GLOBAL.apiInstance;
 
 return function(options, cb){
-    if (!options.listenMessage){
-        (api.listen())();
-        return cb();
-    }
-
     api.setOptions({selfListen: true});
     api.listen(function(err, event){
-        if(err) return;
+        //Block the callback if listen message is false
+        if(err || !options.listenMessage) return;
         if(event.type === 'message'){
             options.onMessageReceived(JSON.stringify(event), function(error, result){
                 if(error) throw error; 
@@ -136,8 +132,64 @@ return function(options, cb){
     var keyword = options.keyword.trim();
 
     api.getUserID(keyword, function(err, obj) {
-        if(err) return cb(null, JSON.stringify([]));
+        if(err) return cb(null, '');
         cb(null, JSON.stringify(obj));
+    });
+};
+";
+        internal const string METHOD_CREATE_GROUP = @"
+var api = GLOBAL.apiInstance;
+
+return function(options, cb){
+    var groupName = options.groupName,
+        groupMembers = options.groupMembers,
+        onGroupCreated = options.onGroupCreated,
+        onGroupCreationFailed = options.onGroupCreationFailed,
+        onGroupRenamed = options.onGroupRenamed,
+        onGroupRenamedFailed = options.onGroupRenamedFailed;
+    
+    api.sendMessage('Created Group ' + groupName, groupMembers, function(err, msgInfo){
+        console.log(msgInfo);
+        api.setTitle(groupName, msgInfo.threadID, function(err, obj){
+            if(err) {
+                onGroupRenamedFailed('0', function(error, result){
+                    if(error) throw error;
+                });
+                return;
+            }
+            onGroupRenamed('200', function(error, result){
+                if(error) throw error;
+            });
+        });
+        
+        if(err){
+            onGroupCreationFailed('0', function(error, result){
+                if(error) throw error;
+            });
+            return;
+        }
+        onGroupCreated(JSON.stringify(msgInfo), function(error, result){
+            if(error) throw error;
+        });
+    });
+};
+";
+
+        internal const string METHOD_GET_THREADLIST = @"
+var api = GLOBAL.apiInstance;
+
+return function(options, cb){
+    api.getThreadList(options.startIndex, options.endIndex, function(err, arr){
+        if(err){
+            options.onThreadListGet('', function(error, result){
+                if(error) throw error;
+            });
+            return;
+        }
+        console.log(arr);
+        options.onThreadListGet(JSON.stringify(arr), function(error, result){
+            if(error) throw error;
+        });
     });
 };
 ";

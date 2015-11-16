@@ -43,6 +43,11 @@ namespace FacebookChatApi
         public delegate void ShareMessageReceivedEventHandler(object sender, MessageReceivedEventArgs e);
         public delegate void AnimatedImageMessageReceivedEventHandler(object sender, MessageReceivedEventArgs e);
         public delegate void SearchUserCompletedEventHandler(object sender, SearchUserCompletedEventArgs e);
+        public delegate void GroupCreatedEventHandler(object sender, MessageSentEventArgs e);
+        public delegate void GroupCreationFailedEventHandler(object sender, EventArgs e);
+        public delegate void GroupRenamedEventHandler(object sender, EventArgs e);
+        public delegate void GroupRenamedFailedEventHandler(object sender, EventArgs e);
+        public delegate void ThreadGetEventHandler(object sender, ThreadGetEventArgs e);
         #endregion
 
         #region "Event List"
@@ -90,6 +95,26 @@ namespace FacebookChatApi
         /// Event fired when user search result is returned
         /// </summary>
         public event SearchUserCompletedEventHandler SearchUserCompleted;
+        /// <summary>
+        /// Event fired when group creation success
+        /// </summary>
+        public event GroupCreatedEventHandler GroupCreated;
+        /// <summary>
+        /// Event fired when group creation failed
+        /// </summary>
+        public event GroupCreationFailedEventHandler GroupCreationFailed;
+        /// <summary>
+        /// Event fired when group renaming success
+        /// </summary>
+        public event GroupRenamedEventHandler GroupRenamed;
+        /// <summary>
+        /// Event fired when group renaming failed
+        /// </summary>
+        public event GroupRenamedFailedEventHandler GroupRenamedFailed;
+        /// <summary>
+        /// Event fired when thread list query result returned
+        /// </summary>
+        public event ThreadGetEventHandler ThreadGet;
         #endregion
 
         #region "Constructor"
@@ -388,6 +413,87 @@ namespace FacebookChatApi
         }
         #endregion
 
+        #region "GROUP OPERATION"
+        /// <summary>
+        /// Create a new group
+        /// </summary>
+        /// <param name="groupName">Specify the group name</param>
+        /// <param name="groupMembers">Specify the group members, at least two</param>
+        /// <returns></returns>
+        public async Task CreateNewGroup(string groupName, string[] groupMembers)
+        {
+            var onGroupCreated = (Func<object, Task<object>>)(async (result) =>
+            {
+                JObject jObj = JObject.Parse((string) result);
+                MessageSentEventArgs e = new MessageSentEventArgs(
+                    jObj.GetValue("threadID").ToString(),
+                    jObj.GetValue("messageID").ToString(),
+                    jObj.GetValue("timestamp").ToString());
+                OnGroupCreated(e);
+                return "";
+            });
+
+            var onGroupCreationFailed = (Func<object, Task<object>>)(async (result) =>
+            {
+                OnGroupCreationFailed(new EventArgs());
+                return "";
+            });
+
+            var onGroupRenamed = (Func<object, Task<object>>)(async (result) =>
+            {
+                OnGroupRenamed(new EventArgs());
+                return "";
+            });
+
+            var onGroupRenamedFailed = (Func<object, Task<object>>)(async (result) =>
+            {
+                OnGroupRenamedFailed(new EventArgs());
+                return "";
+            });
+
+            var createNewGroup = Edge.Func(NodeJSScriptConstant.METHOD_CREATE_GROUP);
+            await createNewGroup(new { 
+                groupName = groupName, 
+                groupMembers = groupMembers,
+                onGroupCreated = onGroupCreated,
+                onGroupCreationFailed = onGroupCreationFailed,
+                onGroupRenamed = onGroupRenamed,
+                onGroupRenamedFailed = onGroupRenamedFailed
+            });
+        }
+
+        public async Task GetThreadList(int startIndex, int endIndex)
+        {
+            try
+            {
+                var onThreadListGet = (Func<Object, Task<object>>)(async (result) =>
+                {
+                    string threadsJson = (string)result;
+                    List<ChatThread> chatThreads = ChatThread.Parse(threadsJson);
+                    string message = "Chat Thread Get Completed !";
+                    if (chatThreads.Count == 0)
+                    {
+                        message += "No result found.";
+                    }
+                    else
+                    {
+                        message += chatThreads.Count + " results found.";
+                    }
+                    ThreadGetEventArgs e = new ThreadGetEventArgs(chatThreads, message);
+                    OnThreadGet(e);
+                    return "";
+                });
+
+                var getThreadList = Edge.Func(NodeJSScriptConstant.METHOD_GET_THREADLIST);
+                await getThreadList(new { startIndex = startIndex, endIndex = endIndex, onThreadListGet = onThreadListGet });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+        #endregion
+
         #region "Utilities"
         /// <summary>
         /// Search user based on email OR username
@@ -482,6 +588,36 @@ namespace FacebookChatApi
             if (SearchUserCompleted != null)
                 SearchUserCompleted(this, e);
         }
+
+        protected void OnGroupCreated(MessageSentEventArgs e)
+        {
+            if (GroupCreated != null)
+                GroupCreated(this, e);
+        }
+
+        protected void OnGroupCreationFailed(EventArgs e)
+        {
+            if (GroupCreationFailed != null)
+                GroupCreationFailed(this, e);
+        }
+
+        protected void OnGroupRenamed(EventArgs e)
+        {
+            if (GroupRenamed != null)
+                GroupRenamed(this, e);
+        }
+
+        protected void OnGroupRenamedFailed(EventArgs e)
+        {
+            if (GroupRenamedFailed != null)
+                GroupRenamedFailed(this, e);
+        }
+
+        protected void OnThreadGet(ThreadGetEventArgs e)
+        {
+            if (ThreadGet != null)
+                ThreadGet(this, e);
+        }
         #endregion
 
         #region "Event Argument"
@@ -522,12 +658,28 @@ namespace FacebookChatApi
         public class SearchUserCompletedEventArgs : EventArgs
         {
             public List<UserSearchResult> UserList { get; private set; }
+            public bool HasResult { get; private set; }
             public string Message { get; private set; }
 
             internal SearchUserCompletedEventArgs(List<UserSearchResult> userList, string message)
             {
                 this.UserList = userList;
                 this.Message = message;
+                this.HasResult = userList.Count > 0;
+            }
+        }
+
+        public class ThreadGetEventArgs : EventArgs
+        {
+            public List<ChatThread> ThreadList { get; private set; }
+            public bool HasResult { get; private set; }
+            public string Message { get; private set; }
+
+            internal ThreadGetEventArgs(List<ChatThread> threadList, string message)
+            {
+                this.ThreadList = threadList;
+                this.Message = message;
+                this.HasResult = threadList.Count > 0;
             }
         }
         #endregion

@@ -40,15 +40,21 @@ namespace FacebookChatApi
             this.Score = score;
         }
 
-        public static List<UserSearchResult> Parse(string json)
+        public static List<UserSearchResult> Parse(string userSearchResultsJson)
         {
             List<UserSearchResult> resultList = new List<UserSearchResult>();
+            if (string.IsNullOrEmpty(userSearchResultsJson))
+            {
+                return resultList;
+            }
+
             try
             {
-                JArray jArray = JArray.Parse(json);
+                if (string.IsNullOrEmpty(userSearchResultsJson)) return resultList;
+                JArray jArray = JArray.Parse(userSearchResultsJson);
                 foreach (JObject jObj in jArray)
                 {
-                    resultList.Add(Parse(jObj));
+                    resultList.Add(ParseSingle(jObj.ToString()));
                 }
             }
             catch (Exception ex)
@@ -58,10 +64,11 @@ namespace FacebookChatApi
             return resultList;
         }
 
-        public static UserSearchResult Parse(JObject jObj)
+        public static UserSearchResult ParseSingle(string userSearchResultJson)
         {
             try
             {
+                JObject jObj = JObject.Parse(userSearchResultJson);
                 UserSearchResult userSearchResult = new UserSearchResult(
                     jObj.GetValue(CONST_USER_ID).ToString(),
                     jObj.GetValue(CONST_PHOTO_URL).ToString(),

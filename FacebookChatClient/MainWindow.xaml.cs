@@ -35,7 +35,9 @@ namespace FacebookChatClient
             facebook.PhotoMessageReceived += facebook_PhotoMessageReceived;
             facebook.StickerMessageReceived += facebook_StickerMessageReceived;
             facebook.AnimatedImageMessageReceived += facebook_AnimatedImageMessageReceived;
-            facebook.SearchUserCompleted += Facebook_SearchUserCompleted;
+            facebook.ShareMessageReceived += facebook_ShareMessageReceived;
+            facebook.SearchUserCompleted += facebook_SearchUserCompleted;
+            facebook.ThreadGet += facebook_ThreadGet;
         }
 
         private void btnLogin_Click(object sender, RoutedEventArgs e)
@@ -57,7 +59,11 @@ namespace FacebookChatClient
             try
             {
                 facebook.ListenMessage = true;
-                facebook.SearchForUser("zzyun1120@hotmail.com");
+                btnSearchUser.IsEnabled = true;
+                btnSendMessage.IsEnabled = true;
+                btnStopListening.IsEnabled = true;
+
+                facebook.GetThreadList(0, 2);
             }
             catch (Exception ex)
             {
@@ -77,8 +83,7 @@ namespace FacebookChatClient
 
         private void facebook_MessageReceived(object sender, Facebook.MessageReceivedEventArgs e)
         {
-            Console.WriteLine("RECEIVED Text message !");
-            Console.WriteLine(e.Message.Body);
+            MessageBox.Show("RECEIVED Text message !\n Content : " + e.Message.Body);
         }
 
         private void facebook_AnimatedImageMessageReceived(object sender, Facebook.MessageReceivedEventArgs e)
@@ -91,6 +96,7 @@ namespace FacebookChatClient
         {
             Console.WriteLine("RECEIVED sticker !");
             Console.WriteLine(e.Message.ContainStickerAttachments().ToString());
+            Console.WriteLine(e.Message.Attachments.Count);
         }
 
         private void facebook_PhotoMessageReceived(object sender, Facebook.MessageReceivedEventArgs e)
@@ -105,9 +111,21 @@ namespace FacebookChatClient
             Console.WriteLine(e.Message.ContainFileAttachments().ToString());
         }
 
-        private void Facebook_SearchUserCompleted(object sender, Facebook.SearchUserCompletedEventArgs e)
+        private void facebook_ShareMessageReceived(object sender, Facebook.MessageReceivedEventArgs e)
         {
-            Console.WriteLine(e.Message);
+            Console.WriteLine("RECEIVED SHARE message !");
+            Console.WriteLine(e.Message.ContainShareAttachments().ToString());
+        }
+
+        private void facebook_SearchUserCompleted(object sender, Facebook.SearchUserCompletedEventArgs e)
+        {
+            if(e.UserList.Count > 0)
+                tbxSearchResult.Text = e.UserList[0].UserID;
+        }
+
+        private void facebook_ThreadGet(object sender, Facebook.ThreadGetEventArgs e)
+        {
+            Console.WriteLine(e.HasResult);
         }
 
         private void btnStopListening_Click(object sender, RoutedEventArgs e)
@@ -121,6 +139,23 @@ namespace FacebookChatClient
                 facebook.ListenMessage = true;
             }
             Console.WriteLine(facebook.ListenMessage.ToString());
+        }
+
+        private void btnSendMessage_Click(object sender, RoutedEventArgs e)
+        {
+            facebook.SendTextMessage(tbxSendMessage.Text, tbxSearchResult.Text);
+        }
+
+        private void btnSearchUser_Click(object sender, RoutedEventArgs e)
+        {
+            facebook.SearchForUser(tbxSearchTerm.Text);
+        }
+
+        private void btnCreateGroup_Click(object sender, RoutedEventArgs e)
+        {
+            string[] groupMembers = tbxGroupMembers.Text.Split(',');
+            string groupName = "TEST CREATE GROUP";
+            facebook.CreateNewGroup(groupName, groupMembers);
         }
     }
 }

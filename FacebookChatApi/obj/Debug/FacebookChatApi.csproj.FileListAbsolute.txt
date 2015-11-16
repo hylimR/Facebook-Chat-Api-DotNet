@@ -12,7 +12,6 @@ D:\Project\FacebookChatApi\FacebookChatApi\bin\Debug\Newtonsoft.Json.xml
 D:\Project\FacebookChatApi\FacebookChatApi\obj\Debug\FacebookChatApi.dll
 D:\Project\FacebookChatApi\FacebookChatApi\obj\Debug\FacebookChatApi.pdb
 D:\Project\FacebookChatApi\FacebookChatApi\obj\Debug\FacebookChatApi.csprojResolveAssemblyReference.cache
-C:\Projects\Facebook-Chat-Api-DotNet\FacebookChatApi\obj\Debug\FacebookChatApi.csprojResolveAssemblyReference.cache
 C:\Projects\Facebook-Chat-Api-DotNet\FacebookChatApi\bin\Debug\edge\double_edge.js
 C:\Projects\Facebook-Chat-Api-DotNet\FacebookChatApi\bin\Debug\edge\edge.js
 C:\Projects\Facebook-Chat-Api-DotNet\FacebookChatApi\bin\Debug\edge\x64\node.dll
@@ -26,3 +25,4 @@ C:\Projects\Facebook-Chat-Api-DotNet\FacebookChatApi\obj\Debug\FacebookChatApi.d
 C:\Projects\Facebook-Chat-Api-DotNet\FacebookChatApi\obj\Debug\FacebookChatApi.pdb
 C:\Projects\Facebook-Chat-Api-DotNet\FacebookChatApi\bin\Debug\FacebookChatApi.dll
 C:\Projects\Facebook-Chat-Api-DotNet\FacebookChatApi\bin\Debug\FacebookChatApi.pdb
+C:\Projects\Facebook-Chat-Api-DotNet\FacebookChatApi\obj\Debug\FacebookChatApi.csprojResolveAssemblyReference.cache
