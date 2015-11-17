@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FacebookChatClient"
         mc:Ignorable="d"
-        Title="MainWindow" Height="504" Width="525">
-    <Grid>
+        Title="MainWindow" Height="540" Width="525">
+    <Grid Margin="0,-60,0,0">
         <Label x:Name="lblEmail" Content="Email : " HorizontalAlignment="Left" Margin="31,87,0,0" VerticalAlignment="Top"/>
         <Label x:Name="lblPassword" Content="Password : " HorizontalAlignment="Left" Margin="10,113,0,0" VerticalAlignment="Top"/>
         <TextBox x:Name="tbxEmail" HorizontalAlignment="Left" Margin="79,87,0,0" TextWrapping="Wrap" Text="zzyun1120@hotmail.com" VerticalAlignment="Top" Width="428"/>
@@ -17,9 +17,13 @@
         <Button Name="btnSendMessage" IsEnabled="False"  Content="Send Message" HorizontalAlignment="Left" Margin="174,213,0,0" VerticalAlignment="Top" Width="98" Click="btnSendMessage_Click"/>
         <TextBox Name="tbxReceivedMessage" HorizontalAlignment="Left" Height="23" Margin="10,250,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="497"/>
         <TextBox Name="tbxSearchTerm" HorizontalAlignment="Left" Height="23" Margin="10,315,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="497"/>
-        <TextBox Name="tbxSearchResult" HorizontalAlignment="Left" Height="23" Margin="10,370,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="497"/>
+        <TextBox Name="tbxSearchResult" IsEnabled="False" HorizontalAlignment="Left" Height="23" Margin="10,370,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="497"/>
         <Button Name="btnSearchUser" IsEnabled="False" Content="Search User" HorizontalAlignment="Left" Margin="174,343,0,0" VerticalAlignment="Top" Width="98" Click="btnSearchUser_Click"/>
-        <TextBox Name="tbxGroupMembers" HorizontalAlignment="Left" Height="23" Margin="10,398,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="497"/>
-        <Button Name="btnCreateGroup" Content="Create Group" HorizontalAlignment="Left" Margin="174,426,0,0" VerticalAlignment="Top" Width="98" Click="btnCreateGroup_Click"/>
+        <TextBox Name="tbxGroupMembers" HorizontalAlignment="Left" Height="23" Margin="10,427,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="497"/>
+        <Button Name="btnCreateGroup" IsEnabled="False" Content="Create Group" HorizontalAlignment="Left" Margin="174,455,0,0" VerticalAlignment="Top" Width="98" Click="btnCreateGroup_Click"/>
+        <Button Name="btnLogout" Content="Logout" HorizontalAlignment="Left" Margin="277,144,0,0" VerticalAlignment="Top" Width="113" Click="btnLogout_Click"/>
+        <TextBox Name="tbxUserID" HorizontalAlignment="Left" Height="23" Margin="10,490,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <TextBox Name="tbxThreadID" HorizontalAlignment="Left" Height="23" Margin="10,527,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
+        <Button Name="btnRemoveUser" Content="Remove User" HorizontalAlignment="Left" Margin="174,511,0,0" VerticalAlignment="Top" Width="98" Click="btnRemoveUser_Click"/>
     </Grid>
 </Window>

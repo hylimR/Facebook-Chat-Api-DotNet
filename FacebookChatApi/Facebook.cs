@@ -11,6 +11,10 @@ namespace FacebookChatApi
 {
     public class Facebook
     {
+        #region "CONSTANT"
+        public const string FACEBOOK_STATUS_OK = "200";
+        public const string FACEBOOK_STATUS_ERROR = "0";
+        #endregion
         #region "Variable"
         public string Email { get; set; }
         public string Password { get; set; }
@@ -34,7 +38,10 @@ namespace FacebookChatApi
         #region "Event Delegate Definition"
         public delegate void LoggedInEventHandler(object sender, EventArgs e);
         public delegate void FailedLoginEventHandler(object sender, EventArgs e);
+        public delegate void LoggedOutEventHandler(object sender, EventArgs e);
+        public delegate void FailedLogoutEventHandler(object sender, EventArgs e);
         public delegate void MessageSentEventHandler(object sender, MessageSentEventArgs e);
+        public delegate void MessageSentFailedEventHandler(object sender, EventArgs e);
         public delegate void MessageListenerToggleEventHandler(object sender, EventArgs e);
         public delegate void MessageReceivedEventHandler(object sender, MessageReceivedEventArgs e);
         public delegate void StickerMessageReceivedEventHandler(object sender, MessageReceivedEventArgs e);
@@ -48,6 +55,10 @@ namespace FacebookChatApi
         public delegate void GroupRenamedEventHandler(object sender, EventArgs e);
         public delegate void GroupRenamedFailedEventHandler(object sender, EventArgs e);
         public delegate void ThreadGetEventHandler(object sender, ThreadGetEventArgs e);
+        public delegate void UserAddedToGroupEventHandler(object sender, EventArgs e);
+        public delegate void UserRemovedFromGroupEventHandler(object sender, EventArgs e);
+        public delegate void GroupChatDeletedEventHandler(object sender, EventArgs e);
+        public delegate void GroupChatDeleteFailedEventHandler(object sender, EventArgs e);
         #endregion
 
         #region "Event List"
@@ -60,35 +71,47 @@ namespace FacebookChatApi
         /// </summary>
         public event FailedLoginEventHandler FailedLogin;
         /// <summary>
+        /// Event fired when logged out
+        /// </summary>
+        public event LoggedOutEventHandler LoggedOut;
+        /// <summary>
+        /// Event fired when logout failed
+        /// </summary>
+        public event FailedLogoutEventHandler FailedLogout;
+        /// <summary>
         /// Event fired when message is successfully sent
         /// </summary>
         public event MessageSentEventHandler MessageSent;
+        /// <summary>
+        /// Event fired when message sent failed
+        /// </summary>
+        public event MessageSentFailedEventHandler MessageSentFailed;
         /// <summary>
         /// Event fired when message listener is toggled.
         /// </summary>
         public event MessageListenerToggleEventHandler MessageListenerToggle;
         /// <summary>
-        /// Event fired when a text message is received
+        /// Event fired when a text message is received (CROSS-THREAD event)
         /// </summary>
         public event MessageReceivedEventHandler MessageReceived;
         /// <summary>
-        /// Event fired when a sticker message is received
+        /// Event fired when a sticker message is received  (CROSS-THREAD event)
         /// </summary>
         public event StickerMessageReceivedEventHandler StickerMessageReceived;
         /// <summary>
-        /// Event fired when a photo message is received
+        /// Event fired when a photo message is received    (CROSS-THREAD event)
         /// </summary>
         public event PhotoMessageReceivedEventHandler PhotoMessageReceived;
         /// <summary>
-        /// Event fired when a file message is received
+        /// Event fired when a file message is received (CROSS-THREAD event)
         /// </summary>
         public event FileMessageReceivedEventHandler FileMessageReceived;
         /// <summary>
-        /// Event fired when a share message is received
+        /// Event fired when a share message is received    (CROSS-THREAD event)
         /// </summary>
         public event ShareMessageReceivedEventHandler ShareMessageReceived;
         /// <summary>
-        /// Event fired when a animated image(GIF) is received
+        /// Event fired when a animated image(GIF) is received  (CROSS-THREAD event)
         /// </summary>
         public event AnimatedImageMessageReceivedEventHandler AnimatedImageMessageReceived;
         /// <summary>
@@ -115,6 +138,22 @@ namespace FacebookChatApi
         /// Event fired when thread list query result returned
         /// </summary>
         public event ThreadGetEventHandler ThreadGet;
+        /// <summary>
+        /// Event fired when user is added to a group
+        /// </summary>
+        public event UserAddedToGroupEventHandler UserAddedToGroup;
+        /// <summary>
+        /// Event fired when user is removed from a group
+        /// </summary>
+        public event UserRemovedFromGroupEventHandler UserRemovedFromGroup;
+        /// <summary>
+        /// Event fired when group chat is deleted
+        /// </summary>
+        public event GroupChatDeletedEventHandler GroupChatDeleted;
+        /// <summary>
+        /// Event fired when group chat deletion failed
+        /// </summary>
+        public event GroupChatDeleteFailedEventHandler GroupChatDeleteFailed;
         #endregion
 
         #region "Constructor"
@@ -136,7 +175,7 @@ namespace FacebookChatApi
         ///<summary>
         ///Login into facebook, email and password must be set
         ///</summary>
-        public async Task Login()
+        public async Task Login(bool forceLogin = false)
         {
             try
             {
@@ -148,7 +187,7 @@ namespace FacebookChatApi
                 var login = Edge.Func(NodeJSScriptConstant.METHOD_LOGIN);
                 dynamic result = await login(new { email = this.Email, password = this.Password });
 
-                if ((string) result.status == "200")
+                if ((string)result.status == FACEBOOK_STATUS_OK)
                 {
                     IsLoggedIn = true;
                     CurrentLoginUserID = (string)result.currentUserID;
@@ -166,36 +205,21 @@ namespace FacebookChatApi
             }
         }
 
-        ///<summary>
-        ///<para>Will automatically approve of any recent logins and continue with the login process.</para>
-        ///</summary>
-        public async Task ForceLogin()
+        /// <summary>
+        /// Log user out of facebook
+        /// </summary>
+        /// <returns></returns>
+        public async Task Logout()
         {
-            try
+            var logout = Edge.Func(NodeJSScriptConstant.METHOD_LOGOUT);
+            var result = await logout(null);
+
+            if ((string)result == FACEBOOK_STATUS_OK)
             {
-                if (string.IsNullOrEmpty(this.Email) || string.IsNullOrEmpty(this.Password))
-                {
-                    throw new Exception("Please set email and password before login");
-                }
-
-                var login = Edge.Func(NodeJSScriptConstant.METHOD_LOGIN);
-                var result = await login(new { email = this.Email, password = this.Password, forceLogin = true });
-
-                if ((string)result == "200")
-                {
-                    IsLoggedIn = true;
-                    OnLoggedIn(new EventArgs());
-                    return;
-                }
-
-                IsLoggedIn = false;
-                OnFailedLogin(new EventArgs());
+                OnLoggedOut(new EventArgs());
+                return;
             }
-            catch (Exception ex)
-            {
-                var errMsg = "Exception occured at Login : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
-                throw new FacebookChatApiException(errMsg);
-            }
+            OnFailedLogout(new EventArgs());
         }
         #endregion
 
@@ -207,31 +231,25 @@ namespace FacebookChatApi
         {
             try
             {
-                //Pass a delegate to handle Node JS event
-                var onMessageSent = (Func<object, Task<object>>)(async (messageInfo) =>
-                {
-                    JObject jObj = JObject.Parse((string)messageInfo);
-                    MessageSentEventArgs e = new MessageSentEventArgs(
-                        jObj.GetValue("threadID").ToString(),
-                        jObj.GetValue("messageID").ToString(),
-                        jObj.GetValue("timestamp").ToString());
-
-                    //Raise Message sent event
-                    OnMessageSent(e);
-
-                    //Return any object back to Node JS if required
-                    return "";
-                });
-
                 var sendMessage = Edge.Func(NodeJSScriptConstant.METHOD_SEND_MESSAGE);
-                var result = await sendMessage(new
+                dynamic result = await sendMessage(new
                 {
                     type = "text",
                     message = message,
                     receiver = receiverID,
-                    onMessageSent = onMessageSent
                 });
 
+                if ((string)result.status == FACEBOOK_STATUS_OK)
+                {
+                    OnMessageSent(new MessageSentEventArgs(
+                        (string)result.messageInfo.threadID,
+                        (string)result.messageInfo.messageID,
+                        (long)result.messageInfo.timestamp));
+                }
+                else if ((string)result.status == FACEBOOK_STATUS_ERROR)
+                {
+                    OnMessageSentFailed(new EventArgs());
+                }
             }
             catch (Exception ex)
             {
@@ -247,30 +265,25 @@ namespace FacebookChatApi
         {
             try
             {
-                //Pass a delegate to handle Node JS event
-                var onMessageSent = (Func<object, Task<object>>)(async (messageInfo) =>
-                {
-                    JObject jObj = JObject.Parse((string)messageInfo);
-                    MessageSentEventArgs e = new MessageSentEventArgs(
-                        jObj.GetValue("threadID").ToString(),
-                        jObj.GetValue("messageID").ToString(),
-                        jObj.GetValue("timestamp").ToString());
-
-                    //Raise Message sent event
-                    OnMessageSent(e);
-
-                    //Return any object back to Node JS if required
-                    return "";
-                });
-
                 var sendMessage = Edge.Func(NodeJSScriptConstant.METHOD_SEND_MESSAGE);
-                var result = await sendMessage(new
+                dynamic result = await sendMessage(new
                 {
                     type = "file",
                     attachment = filePath,
                     receiver = receiverID,
-                    onMessageSent = onMessageSent
                 });
+
+                if ((string)result.status == FACEBOOK_STATUS_OK)
+                {
+                    OnMessageSent(new MessageSentEventArgs(
+                        (string)result.messageInfo.threadID,
+                        (string)result.messageInfo.messageID,
+                        (long)result.messageInfo.timestamp));
+                }
+                else if ((string)result.status == FACEBOOK_STATUS_ERROR)
+                {
+                    OnMessageSentFailed(new EventArgs());
+                }
             }
             catch (Exception ex)
             {
@@ -288,29 +301,25 @@ namespace FacebookChatApi
         {
             try
             {
-                var onMessageSent = (Func<object, Task<object>>)(async (messageInfo) =>
-                {
-                    JObject jObj = JObject.Parse((string)messageInfo);
-                    MessageSentEventArgs e = new MessageSentEventArgs(
-                        jObj.GetValue("threadID").ToString(),
-                        jObj.GetValue("messageID").ToString(),
-                        jObj.GetValue("timestamp").ToString());
-
-                    //Raise Message sent event
-                    OnMessageSent(e);
-
-                    //Return any object back to Node JS if required
-                    return "";
-                });
-
                 var sendMessage = Edge.Func(NodeJSScriptConstant.METHOD_SEND_MESSAGE);
-                var result = await sendMessage(new
+                dynamic result = await sendMessage(new
                 {
                     type = "file",
                     attachment = filePath,
                     receiver = receiverID,
-                    onMessageSent = onMessageSent
                 });
+          
+               if ((string)result.status == FACEBOOK_STATUS_OK)
+                {
+                    OnMessageSent(new MessageSentEventArgs(
+                        (string)result.messageInfo.threadID,
+                        (string)result.messageInfo.messageID,
+                        (long)result.messageInfo.timestamp));
+                }
+                else if ((string)result.status == FACEBOOK_STATUS_ERROR)
+                {
+                    OnMessageSentFailed(new EventArgs());
+                }
             }
             catch (Exception ex)
             {
@@ -327,30 +336,25 @@ namespace FacebookChatApi
         {
             try
             {
-                //Pass a delegate to handle Node JS event
-                var onMessageSent = (Func<object, Task<object>>)(async (messageInfo) =>
-                {
-                    JObject jObj = JObject.Parse((string)messageInfo);
-                    MessageSentEventArgs e = new MessageSentEventArgs(
-                        jObj.GetValue("threadID").ToString(),
-                        jObj.GetValue("messageID").ToString(),
-                        jObj.GetValue("timestamp").ToString());
-
-                    //Raise Message sent event
-                    OnMessageSent(e);
-
-                    //Return any object back to Node JS if required
-                    return "";
-                });
-
                 var sendMessage = Edge.Func(NodeJSScriptConstant.METHOD_SEND_MESSAGE);
-                var result = await sendMessage(new
+                dynamic result = await sendMessage(new
                 {
                     type = "url",
                     url = link,
                     receiver = receiverID,
-                    onMessageSent = onMessageSent
                 });
+
+                if ((string)result.status == FACEBOOK_STATUS_OK)
+                {
+                    OnMessageSent(new MessageSentEventArgs(
+                        (string)result.messageInfo.threadID,
+                        (string)result.messageInfo.messageID,
+                        (long)result.messageInfo.timestamp));
+                }
+                else if ((string)result.status == FACEBOOK_STATUS_ERROR)
+                {
+                    OnMessageSentFailed(new EventArgs());
+                }
             }
             catch (Exception ex)
             {
@@ -422,55 +426,80 @@ namespace FacebookChatApi
         /// <returns></returns>
         public async Task CreateNewGroup(string groupName, string[] groupMembers)
         {
-            var onGroupCreated = (Func<object, Task<object>>)(async (result) =>
+            var createNewGroup = Edge.Func(NodeJSScriptConstant.METHOD_CREATE_GROUP);
+            dynamic result = await createNewGroup(new
             {
-                JObject jObj = JObject.Parse((string) result);
-                MessageSentEventArgs e = new MessageSentEventArgs(
-                    jObj.GetValue("threadID").ToString(),
-                    jObj.GetValue("messageID").ToString(),
-                    jObj.GetValue("timestamp").ToString());
-                OnGroupCreated(e);
-                return "";
+                groupName = groupName,
+                groupMembers = groupMembers,
             });
 
-            var onGroupCreationFailed = (Func<object, Task<object>>)(async (result) =>
+            if ((bool)result.groupCreated == true)
+            {
+                OnGroupCreated(new MessageSentEventArgs(
+                    (string)result.messageInfo.threadID,
+                    (string)result.messageInfo.messageID,
+                    (long)result.messageInfo.timestamp
+                    ));
+            }
+            else
             {
                 OnGroupCreationFailed(new EventArgs());
-                return "";
-            });
+            }
 
-            var onGroupRenamed = (Func<object, Task<object>>)(async (result) =>
+            if ((bool)result.groupRenamed == true)
             {
                 OnGroupRenamed(new EventArgs());
-                return "";
-            });
-
-            var onGroupRenamedFailed = (Func<object, Task<object>>)(async (result) =>
+            }
+            else
             {
                 OnGroupRenamedFailed(new EventArgs());
-                return "";
-            });
+            }
+        }
 
-            var createNewGroup = Edge.Func(NodeJSScriptConstant.METHOD_CREATE_GROUP);
-            await createNewGroup(new { 
-                groupName = groupName, 
-                groupMembers = groupMembers,
-                onGroupCreated = onGroupCreated,
-                onGroupCreationFailed = onGroupCreationFailed,
-                onGroupRenamed = onGroupRenamed,
-                onGroupRenamedFailed = onGroupRenamedFailed
-            });
+        public async Task DeleteGroup(string threadID)
+        {
+            var deleteGroup = Edge.Func(NodeJSScriptConstant.METHOD_DELETE_THREAD);
+            dynamic result = await deleteGroup(new { threadID = threadID });
+
+            if ((string)result == FACEBOOK_STATUS_OK)
+            {
+                OnGroupChatDeleted(new EventArgs());
+                return;
+            }
+            OnGroupChatDeleteFailed(new EventArgs());
+        }
+
+        public async Task AddUserToGroup(string userID, string threadID)
+        {
+            var addUserToGroup = Edge.Func(NodeJSScriptConstant.METHOD_GROUP_ADD_USER);
+            dynamic result = await addUserToGroup(new { userID = userID, threadID = threadID });
+            if ((string)result == FACEBOOK_STATUS_OK)
+            {
+                OnUserAddedToGroup(new EventArgs());
+            }
+        }
+
+        public async Task RemoveUserFromGroup(string userID, string threadID)
+        {
+            var removeUserFromGroup = Edge.Func(NodeJSScriptConstant.METHOD_GROUP_REMOVE_USER);
+            dynamic result = await removeUserFromGroup(new { userID = userID, threadID = threadID });
+            if ((string)result == FACEBOOK_STATUS_OK)
+            {
+                OnUserRemovedFromGroup(new EventArgs());
+            }
         }
 
         public async Task GetThreadList(int startIndex, int endIndex)
         {
             try
             {
-                var onThreadListGet = (Func<Object, Task<object>>)(async (result) =>
+                var getThreadList = Edge.Func(NodeJSScriptConstant.METHOD_GET_THREADLIST);
+                dynamic result = await getThreadList(new { startIndex = startIndex, endIndex = endIndex });
+                if ((string)result.status == FACEBOOK_STATUS_OK)
                 {
-                    string threadsJson = (string)result;
+                    string threadsJson = (string)result.threadsJson;
                     List<ChatThread> chatThreads = ChatThread.Parse(threadsJson);
-                    string message = "Chat Thread Get Completed !";
+                    string message = (string)result.message;
                     if (chatThreads.Count == 0)
                     {
                         message += "No result found.";
@@ -481,11 +510,7 @@ namespace FacebookChatApi
                     }
                     ThreadGetEventArgs e = new ThreadGetEventArgs(chatThreads, message);
                     OnThreadGet(e);
-                    return "";
-                });
-
-                var getThreadList = Edge.Func(NodeJSScriptConstant.METHOD_GET_THREADLIST);
-                await getThreadList(new { startIndex = startIndex, endIndex = endIndex, onThreadListGet = onThreadListGet });
+                }
             }
             catch (Exception ex)
             {
@@ -507,7 +532,7 @@ namespace FacebookChatApi
 
             List<UserSearchResult> userList = UserSearchResult.Parse((string)result);
             string message = "Search Completed ! ";
-            if(userList.Count == 0)
+            if (userList.Count == 0)
             {
                 message += " No results found !";
             }
@@ -534,6 +559,18 @@ namespace FacebookChatApi
                 FailedLogin(this, e);
         }
 
+        protected void OnLoggedOut(EventArgs e)
+        {
+            if (LoggedOut != null)
+                LoggedOut(this, e);
+        }
+
+        protected void OnFailedLogout(EventArgs e)
+        {
+            if (FailedLogout != null)
+                FailedLogout(this, e);
+        }
+
         protected async void OnMessageListenerToggled(EventArgs e)
         {
             await ListeningToMessage();
@@ -545,6 +582,12 @@ namespace FacebookChatApi
         {
             if (MessageSent != null)
                 MessageSent(this, e);
+        }
+
+        protected void OnMessageSentFailed(EventArgs e)
+        {
+            if (MessageSentFailed != null)
+                MessageSentFailed(this, e);
         }
 
         protected void OnMessageReceived(MessageReceivedEventArgs e)
@@ -617,6 +660,30 @@ namespace FacebookChatApi
         {
             if (ThreadGet != null)
                 ThreadGet(this, e);
+        }
+
+        protected void OnUserAddedToGroup(EventArgs e)
+        {
+            if (UserAddedToGroup != null)
+                UserAddedToGroup(this, e);
+        }
+
+        protected void OnUserRemovedFromGroup(EventArgs e)
+        {
+            if (UserRemovedFromGroup != null)
+                UserRemovedFromGroup(this, e);
+        }
+
+        protected void OnGroupChatDeleted(EventArgs e)
+        {
+            if (GroupChatDeleted != null)
+                GroupChatDeleted(this, e);
+        }
+
+        protected void OnGroupChatDeleteFailed(EventArgs e)
+        {
+            if (GroupChatDeleteFailed != null)
+                GroupChatDeleteFailed(this, e);
         }
         #endregion
 

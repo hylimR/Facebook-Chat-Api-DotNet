@@ -29,6 +29,7 @@ namespace FacebookChatClient
             facebook = new Facebook();
             facebook.LoggedIn += facebook_LoggedIn;
             facebook.FailedLogin += facebook_FailedLogin;
+            facebook.LoggedOut += facebook_LoggedOut;
             facebook.MessageSent += facebook_MessageSent;
             facebook.MessageReceived += facebook_MessageReceived;
             facebook.FileMessageReceived += facebook_FileMessageReceived;
@@ -37,7 +38,10 @@ namespace FacebookChatClient
             facebook.AnimatedImageMessageReceived += facebook_AnimatedImageMessageReceived;
             facebook.ShareMessageReceived += facebook_ShareMessageReceived;
             facebook.SearchUserCompleted += facebook_SearchUserCompleted;
+            facebook.GroupCreated += facebook_GroupCreated;
             facebook.ThreadGet += facebook_ThreadGet;
+            facebook.UserAddedToGroup += facebook_UserAddedToGroup;
+            facebook.UserRemovedFromGroup += facebook_UserRemovedFromGroup;
         }
 
         private void btnLogin_Click(object sender, RoutedEventArgs e)
@@ -62,8 +66,7 @@ namespace FacebookChatClient
                 btnSearchUser.IsEnabled = true;
                 btnSendMessage.IsEnabled = true;
                 btnStopListening.IsEnabled = true;
-
-                facebook.GetThreadList(0, 2);
+                btnCreateGroup.IsEnabled = true;
             }
             catch (Exception ex)
             {
@@ -74,6 +77,16 @@ namespace FacebookChatClient
         private void facebook_FailedLogin(object sender, EventArgs e)
         {
             MessageBox.Show("Failed Login");
+        }
+
+        private void facebook_LoggedOut(object sender, EventArgs e)
+        {
+            facebook = new Facebook();
+
+            btnSearchUser.IsEnabled = false;
+            btnSendMessage.IsEnabled = false;
+            btnStopListening.IsEnabled = false;
+            btnCreateGroup.IsEnabled = false;
         }
 
         private void facebook_MessageSent(object sender, Facebook.MessageSentEventArgs e)
@@ -117,15 +130,32 @@ namespace FacebookChatClient
             Console.WriteLine(e.Message.ContainShareAttachments().ToString());
         }
 
+        private void facebook_GroupCreated(object sender, Facebook.MessageSentEventArgs e)
+        {
+
+            tbxThreadID.Text = e.ThreadID;
+
+        }
+
         private void facebook_SearchUserCompleted(object sender, Facebook.SearchUserCompletedEventArgs e)
         {
-            if(e.UserList.Count > 0)
+            if (e.UserList.Count > 0)
                 tbxSearchResult.Text = e.UserList[0].UserID;
         }
 
         private void facebook_ThreadGet(object sender, Facebook.ThreadGetEventArgs e)
         {
             Console.WriteLine(e.HasResult);
+        }
+
+        private void facebook_UserAddedToGroup(object sender, EventArgs e)
+        {
+            MessageBox.Show("USER ADDED");
+        }
+
+        private void facebook_UserRemovedFromGroup(object sender, EventArgs e)
+        {
+            MessageBox.Show("USER REMOVED");
         }
 
         private void btnStopListening_Click(object sender, RoutedEventArgs e)
@@ -151,11 +181,24 @@ namespace FacebookChatClient
             facebook.SearchForUser(tbxSearchTerm.Text);
         }
 
-        private void btnCreateGroup_Click(object sender, RoutedEventArgs e)
+        private async void btnCreateGroup_Click(object sender, RoutedEventArgs e)
         {
-            string[] groupMembers = tbxGroupMembers.Text.Split(',');
-            string groupName = "TEST CREATE GROUP";
-            facebook.CreateNewGroup(groupName, groupMembers);
+            if (!string.IsNullOrEmpty(tbxGroupMembers.Text) && tbxGroupMembers.Text.Contains(','))
+            {
+                string[] groupMembers = tbxGroupMembers.Text.Split(',');
+                string groupName = "TEST CREATE GROUP";
+                await facebook.CreateNewGroup(groupName, groupMembers);
+            }
+        }
+
+        private void btnLogout_Click(object sender, RoutedEventArgs e)
+        {
+            facebook.Logout();
+        }
+
+        private void btnRemoveUser_Click(object sender, RoutedEventArgs e)
+        {
+            facebook.RemoveUserFromGroup(tbxUserID.Text, tbxThreadID.Text);
         }
     }
 }

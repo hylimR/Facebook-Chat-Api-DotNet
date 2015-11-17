@@ -30,9 +30,11 @@ var api = GLOBAL.apiInstance;
 
 return function(options, cb) {
     api.logout(function(err){
-        console.log(err);
+        if(err) throw err;
+
         api = null;
         GLOBAL.apiInstance = null;
+        cb(null, '200');
     });
 };
 ";
@@ -43,42 +45,55 @@ var fs = require('fs');
 
 return function(options, cb) {
     
-    if (options === null) return cb(null, 'Object cannot be null');
-    if (!options.receiver) return cb(null, 'No message receiver is specified');
-    
-    var receiver = options.receiver;    
+    console.log(options);
+    var result = {};
 
+    if (options === null) {
+        result.status = '0';
+        result.message = 'Passed in argument is empty';
+        return cb(null, result);
+    }
+    if (!options.receiver) {
+        result.status = '0';
+        result.message = 'No message receiver is specified';
+        return cb(null, result);
+    }
+    
+    if (!options.type) {
+        result.status = '0';
+        result.message = 'No message type is specified';
+        return cb(null, result);
+    }
+    var receiver = options.receiver;  
     switch (options.type) {
         case 'text':
             var message = { body : options.message };
             api.sendMessage(message, receiver, function(err, messageInfo){
                 if (err) {
-                    options.onMessageSent(err, function(error, result) {
-                        if(error) throw error;
-                    });
-                    return;
+                    result.status = '0';
+                    result.message = 'Text Message not sent';
+                    return cb(null, result);
                 }
                 
-                options.onMessageSent(JSON.stringify(messageInfo), function(error, result) {
-                    if(error) throw error;
-                });
-                return;
+                result.status = '0';
+                result.message = 'Text Message sent';
+                result.messageInfo = messageInfo;
+                return cb(null, result);
             });
             break;
         case 'file':
-            var message = { attachment : fs.createReadStream(options.attachment), body : '2222' };
+            var message = { attachment : fs.createReadStream(options.attachment), body : options.message };
             api.sendMessage(message, receiver, function(err, messageInfo){
                 if (err) {
-                    options.onMessageSent(err, function(error, result) {
-                        if(error) throw error;
-                    });
-                    return;
+                    result.status = '0';
+                    result.message = 'Text Message not sent';
+                    return cb(null, result);
                 }
                 
-                options.onMessageSent(JSON.stringify(messageInfo), function(error, result) {
-                    if(error) throw error;
-                });
-                return;
+                result.status = '0';
+                result.message = 'File Message sent';
+                result.messageInfo = messageInfo;
+                return cb(null, result);
             });
             break;
         case 'sticker': 
@@ -88,23 +103,21 @@ return function(options, cb) {
             var message = { url : options.url };
             api.sendMessage(message, receiver, function(err, messageInfo){
                 if (err) {
-                    options.onMessageSent(err, function(error, result) {
-                        if(error) throw error;
-                    });
-                    return;
+                    result.status = '0';
+                    result.message = 'URL Message not sent';
+                    return cb(null, result);
                 }
                 
-                options.onMessageSent(JSON.stringify(messageInfo), function(error, result) {
-                    if(error) throw error;
-                });
+                result.status = '0';
+                result.message = 'URL Message sent';
+                result.messageInfo = messageInfo;
+                return cb(null, result);
                 return;
             });
             break;
         default:
             break;
     }
-
-    cb(null, 'Operation Finish');
 };
 
 ";
@@ -143,34 +156,37 @@ var api = GLOBAL.apiInstance;
 return function(options, cb){
     var groupName = options.groupName,
         groupMembers = options.groupMembers,
-        onGroupCreated = options.onGroupCreated,
-        onGroupCreationFailed = options.onGroupCreationFailed,
-        onGroupRenamed = options.onGroupRenamed,
-        onGroupRenamedFailed = options.onGroupRenamedFailed;
+        result = {};
     
     api.sendMessage('Created Group ' + groupName, groupMembers, function(err, msgInfo){
-        console.log(msgInfo);
+        if(err){
+            result.groupCreated = false;
+            result.messageInfo = null;
+        }
+        else{
+            result.groupCreated = true;
+            result.messageInfo = msgInfo;
+        } 
+
         api.setTitle(groupName, msgInfo.threadID, function(err, obj){
             if(err) {
-                onGroupRenamedFailed('0', function(error, result){
-                    if(error) throw error;
-                });
-                return;
+                result.groupRenamed = false;
+                return cb(null, result);
             }
-            onGroupRenamed('200', function(error, result){
-                if(error) throw error;
-            });
-        });
-        
-        if(err){
-            onGroupCreationFailed('0', function(error, result){
-                if(error) throw error;
-            });
-            return;
-        }
-        onGroupCreated(JSON.stringify(msgInfo), function(error, result){
-            if(error) throw error;
-        });
+            result.groupRenamed = true;
+            return cb(null, result);
+        });        
+    });
+};
+";
+
+        internal const string METHOD_DELETE_THREAD = @"
+var api = GLOBAL.apiInstance;
+
+return function(options,cb){
+    api.deleteThread(options.threadID, function(err) {
+        if(err) return cb(null, '0');
+        return cb(null, '200');
     });
 };
 ";
@@ -179,17 +195,40 @@ return function(options, cb){
 var api = GLOBAL.apiInstance;
 
 return function(options, cb){
+    var result = {};
+
     api.getThreadList(options.startIndex, options.endIndex, function(err, arr){
         if(err){
-            options.onThreadListGet('', function(error, result){
-                if(error) throw error;
-            });
-            return;
+            result.status = '0';
+            result.message = 'Unable to get any thread';
+            return cb(null, result);
         }
-        console.log(arr);
-        options.onThreadListGet(JSON.stringify(arr), function(error, result){
-            if(error) throw error;
-        });
+        result.status = '200';
+        result.message = 'Got thread list';
+        result.threadsJson = JSON.stringify(arr);
+        return cb(null, result);
+    });
+};
+";
+
+        internal const string METHOD_GROUP_ADD_USER = @"
+var api = GLOBAL.apiInstance;
+
+return function(options, cb){
+    api.addUserToGroup(options.userID, options.threadID, function(err){
+        if(err) return cb(null, '0');
+        return cb(null, '200')
+    });
+};
+";
+
+        internal const string METHOD_GROUP_REMOVE_USER = @"
+var api = GLOBAL.apiInstance;
+
+return function(options, cb){
+    api.removeUserFromGroup(options.userID, options.threadID, function(err){
+        if(err) return cb(null, '0');
+        return cb(null, '200');
     });
 };
 ";
