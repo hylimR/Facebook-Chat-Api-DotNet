@@ -13,15 +13,20 @@ GLOBAL.apiInstance = null;
 var login = require('facebook-chat-api');
 
 return function(options, cb) {
+    var out = {};
+    
     login({email : options.email, password: options.password }, function callback(err, api){
-        if(err) return cb(null, '0');
-        if(options.forceLogin) api.setOptions({ forceLogin : true });
+        if(err) {
+            out.currentUserID = '';
+            out.status = '0'; 
+            return cb(null, out); 
+        }
+        api.setOptions({ forceLogin : options.forceLogin });
 
         GLOBAL.apiInstance = api;
-        var out = {};
         out.currentUserID = api.getCurrentUserID();
         out.status = '200';
-        cb(null, out);
+        return cb(null, out);
     });
 };
 ";

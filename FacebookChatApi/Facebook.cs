@@ -184,19 +184,21 @@ namespace FacebookChatApi
                     throw new Exception("Please set email and password before login");
                 }
 
+                //Start NodeJS script to start logging in
                 var login = Edge.Func(NodeJSScriptConstant.METHOD_LOGIN);
-                dynamic result = await login(new { email = this.Email, password = this.Password });
+                dynamic result = await login(new { email = this.Email, password = this.Password, forceLogin = forceLogin });
 
+                //Raise approriate event depend on the outcome
                 if ((string)result.status == FACEBOOK_STATUS_OK)
                 {
                     IsLoggedIn = true;
                     CurrentLoginUserID = (string)result.currentUserID;
-                    OnLoggedIn(new EventArgs());
+                    OnLoggedIn(EventArgs.Empty);
                     return;
                 }
 
                 IsLoggedIn = false;
-                OnFailedLogin(new EventArgs());
+                OnFailedLogin(EventArgs.Empty);
             }
             catch (Exception ex)
             {
@@ -211,15 +213,24 @@ namespace FacebookChatApi
         /// <returns></returns>
         public async Task Logout()
         {
-            var logout = Edge.Func(NodeJSScriptConstant.METHOD_LOGOUT);
-            var result = await logout(null);
-
-            if ((string)result == FACEBOOK_STATUS_OK)
+            try
             {
-                OnLoggedOut(new EventArgs());
-                return;
+                var logout = Edge.Func(NodeJSScriptConstant.METHOD_LOGOUT);
+                var result = await logout(null);
+
+                //Raise approriate event depend on the outcome
+                if ((string)result == FACEBOOK_STATUS_OK)
+                {
+                    OnLoggedOut(new EventArgs());
+                    return;
+                }
+                OnFailedLogout(new EventArgs());
             }
-            OnFailedLogout(new EventArgs());
+            catch (Exception ex)
+            {
+                var errMsg = "Exception occured at Logout : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
+                throw new FacebookChatApiException(errMsg);
+            }
         }
         #endregion
 
@@ -323,7 +334,7 @@ namespace FacebookChatApi
             }
             catch (Exception ex)
             {
-                var errMsg = "Exception occured at SendImageMessage : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
+                var errMsg = "Exception occured at SendStickerMessage : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
                 throw new FacebookChatApiException(errMsg);
             }
         }
@@ -367,53 +378,63 @@ namespace FacebookChatApi
         #region "RECEIVED MESSAGE"
         private async Task ListeningToMessage()
         {
-            var onMessageReceived = (Func<object, Task<object>>)(async (messageJson) =>
+            try
             {
-                Message message = Message.Parse((string)messageJson);
-                MessageReceivedEventArgs e = new MessageReceivedEventArgs(message);
-                //Raise Message sent event
-                if (!message.ContainAttachments())
+                //Various event depend on the type of message received
+                var onMessageReceived = (Func<object, Task<object>>)(async (messageJson) =>
                 {
-                    OnMessageReceived(e);
-                }
-                else
+                    Message message = Message.Parse((string)messageJson);
+                    MessageReceivedEventArgs e = new MessageReceivedEventArgs(message);
+
+                    if (!message.ContainAttachments())
+                    {
+                        OnMessageReceived(e);
+                    }
+                    else
+                    {
+                        if (message.ContainFileAttachments())
+                        {
+                            OnFileMessageReceived(e);
+                        }
+
+                        if (message.ContainPhotoAttachments())
+                        {
+                            OnPhotoMessageReceived(e);
+                        }
+
+                        if (message.ContainShareAttachments())
+                        {
+                            OnShareMessageReceived(e);
+                        }
+
+                        if (message.ContainStickerAttachments())
+                        {
+                            OnStickerMessageReceived(e);
+                        }
+
+                        if (message.ContainAnimatedImageAttachments())
+                        {
+                            OnAnimatedImageMessageReceived(e);
+                        }
+                    }
+
+                    //Return any object back to Node JS if required
+                    return "";
+                });
+
+                //Register event when received new message
+                var toggleMessageListening = Edge.Func(NodeJSScriptConstant.METHOD_MESSAGE_LISTENER);
+                await toggleMessageListening(new
                 {
-                    if (message.ContainFileAttachments())
-                    {
-                        OnFileMessageReceived(e);
-                    }
-
-                    if (message.ContainPhotoAttachments())
-                    {
-                        OnPhotoMessageReceived(e);
-                    }
-
-                    if (message.ContainShareAttachments())
-                    {
-                        OnShareMessageReceived(e);
-                    }
-
-                    if (message.ContainStickerAttachments())
-                    {
-                        OnStickerMessageReceived(e);
-                    }
-
-                    if (message.ContainAnimatedImageAttachments())
-                    {
-                        OnAnimatedImageMessageReceived(e);
-                    }
-                }
-
-                //Return any object back to Node JS if required
-                return "";
-            });
-
-            var toggleMessageListening = Edge.Func(NodeJSScriptConstant.METHOD_MESSAGE_LISTENER);
-            await toggleMessageListening(new
+                    listenMessage = this.listenMessage,
+                    onMessageReceived = onMessageReceived
+                });
+            }
+            catch (Exception ex)
             {
-                listenMessage = this.listenMessage,
-                onMessageReceived = onMessageReceived
-            });
+                var errMsg = "Exception occured at ListeningToMessage : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
+                throw new FacebookChatApiException(errMsg);
+            }
         }
         #endregion
 
@@ -426,66 +447,98 @@ namespace FacebookChatApi
         /// <returns></returns>
         public async Task CreateNewGroup(string groupName, string[] groupMembers)
         {
-            var createNewGroup = Edge.Func(NodeJSScriptConstant.METHOD_CREATE_GROUP);
-            dynamic result = await createNewGroup(new
+            try
             {
-                groupName = groupName,
-                groupMembers = groupMembers,
-            });
+                var createNewGroup = Edge.Func(NodeJSScriptConstant.METHOD_CREATE_GROUP);
+                dynamic result = await createNewGroup(new
+                {
+                    groupName = groupName,
+                    groupMembers = groupMembers,
+                });
 
-            if ((bool)result.groupCreated == true)
-            {
-                OnGroupCreated(new MessageSentEventArgs(
-                    (string)result.messageInfo.threadID,
-                    (string)result.messageInfo.messageID,
-                    (long)result.messageInfo.timestamp
-                    ));
-            }
-            else
-            {
-                OnGroupCreationFailed(new EventArgs());
-            }
+                if ((bool)result.groupCreated == true)
+                {
+                    OnGroupCreated(new MessageSentEventArgs(
+                        (string)result.messageInfo.threadID,
+                        (string)result.messageInfo.messageID,
+                        (long)result.messageInfo.timestamp
+                        ));
+                }
+                else
+                {
+                    OnGroupCreationFailed(new EventArgs());
+                }
 
-            if ((bool)result.groupRenamed == true)
-            {
-                OnGroupRenamed(new EventArgs());
+                if ((bool)result.groupRenamed == true)
+                {
+                    OnGroupRenamed(new EventArgs());
+                }
+                else
+                {
+                    OnGroupRenamedFailed(new EventArgs());
+                }
             }
-            else
+            catch (Exception ex)
             {
-                OnGroupRenamedFailed(new EventArgs());
+                var errMsg = "Exception occured at CreateNewGroup : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
+                throw new FacebookChatApiException(errMsg);
             }
         }
 
         public async Task DeleteGroup(string threadID)
         {
-            var deleteGroup = Edge.Func(NodeJSScriptConstant.METHOD_DELETE_THREAD);
-            dynamic result = await deleteGroup(new { threadID = threadID });
-
-            if ((string)result == FACEBOOK_STATUS_OK)
+            try
             {
-                OnGroupChatDeleted(new EventArgs());
-                return;
+                var deleteGroup = Edge.Func(NodeJSScriptConstant.METHOD_DELETE_THREAD);
+                dynamic result = await deleteGroup(new { threadID = threadID });
+
+                if ((string)result == FACEBOOK_STATUS_OK)
+                {
+                    OnGroupChatDeleted(new EventArgs());
+                    return;
+                }
+                OnGroupChatDeleteFailed(new EventArgs());
             }
-            OnGroupChatDeleteFailed(new EventArgs());
+            catch (Exception ex)
+            {
+                var errMsg = "Exception occured at Delete Group : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
+                throw new FacebookChatApiException(errMsg);
+            }
         }
 
         public async Task AddUserToGroup(string userID, string threadID)
         {
-            var addUserToGroup = Edge.Func(NodeJSScriptConstant.METHOD_GROUP_ADD_USER);
-            dynamic result = await addUserToGroup(new { userID = userID, threadID = threadID });
-            if ((string)result == FACEBOOK_STATUS_OK)
+            try
             {
-                OnUserAddedToGroup(new EventArgs());
+                var addUserToGroup = Edge.Func(NodeJSScriptConstant.METHOD_GROUP_ADD_USER);
+                dynamic result = await addUserToGroup(new { userID = userID, threadID = threadID });
+                if ((string)result == FACEBOOK_STATUS_OK)
+                {
+                    OnUserAddedToGroup(new EventArgs());
+                }
+            }
+            catch (Exception ex)
+            {
+                var errMsg = "Exception occured at AddUserToGroup : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
+                throw new FacebookChatApiException(errMsg);
             }
         }
 
         public async Task RemoveUserFromGroup(string userID, string threadID)
         {
-            var removeUserFromGroup = Edge.Func(NodeJSScriptConstant.METHOD_GROUP_REMOVE_USER);
-            dynamic result = await removeUserFromGroup(new { userID = userID, threadID = threadID });
-            if ((string)result == FACEBOOK_STATUS_OK)
+            try
             {
-                OnUserRemovedFromGroup(new EventArgs());
+                var removeUserFromGroup = Edge.Func(NodeJSScriptConstant.METHOD_GROUP_REMOVE_USER);
+                dynamic result = await removeUserFromGroup(new { userID = userID, threadID = threadID });
+                if ((string)result == FACEBOOK_STATUS_OK)
+                {
+                    OnUserRemovedFromGroup(new EventArgs());
+                }
+            }
+            catch (Exception ex)
+            {
+                var errMsg = "Exception occured at RemoveUserFromGroup : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
+                throw new FacebookChatApiException(errMsg);
             }
         }
 
@@ -514,7 +567,8 @@ namespace FacebookChatApi
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                var errMsg = "Exception occured at GetThreadList : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
+                throw new FacebookChatApiException(errMsg);
             }
         }
         #endregion
@@ -527,22 +581,30 @@ namespace FacebookChatApi
         /// <returns></returns>
         public async void SearchForUser(string keyword)
         {
-            var searchForUser = Edge.Func(NodeJSScriptConstant.METHOD_SEARCH_USER);
-            var result = await searchForUser(new { keyword = keyword });
-
-            List<UserSearchResult> userList = UserSearchResult.Parse((string)result);
-            string message = "Search Completed ! ";
-            if (userList.Count == 0)
+            try
             {
-                message += " No results found !";
-            }
-            else
-            {
-                message += userList.Count + " Results Found ~";
-            }
+                var searchForUser = Edge.Func(NodeJSScriptConstant.METHOD_SEARCH_USER);
+                var result = await searchForUser(new { keyword = keyword });
 
-            SearchUserCompletedEventArgs args = new SearchUserCompletedEventArgs(userList, message);
-            OnSearchUserCompleted(args);
+                List<UserSearchResult> userList = UserSearchResult.Parse((string)result);
+                string message = "Search Completed ! ";
+                if (userList.Count == 0)
+                {
+                    message += " No results found !";
+                }
+                else
+                {
+                    message += userList.Count + " Results Found ~";
+                }
+
+                SearchUserCompletedEventArgs args = new SearchUserCompletedEventArgs(userList, message);
+                OnSearchUserCompleted(args);
+            }
+            catch (Exception ex)
+            {
+                var errMsg = "Exception occured at SearchForUser : " + ex.Message + "\nStack Trace : " + ex.StackTrace;
+                throw new FacebookChatApiException(errMsg);
+            }
         }
         #endregion
 
